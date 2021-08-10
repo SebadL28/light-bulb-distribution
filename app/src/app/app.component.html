@@ -1,0 +1,16 @@
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-4">
+      <input (change)="readFile($event)" type="file">
+      <button class="btn btn-primary">Cargar</button>
+    </div>
+    <div class="col-8">
+      <div *ngIf="matrixBase.length > 0" class="matrix-container">
+        <div *ngFor="let matrixRow of matrixBase" class="matrix-row">
+          <div *ngFor="let matrixCol of matrixRow" [ngClass]="{'matrix-wall': (matrixCol == 1)}" class="matrix-col">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

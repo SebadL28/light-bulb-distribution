@@ -1,0 +1,24 @@
+.matrix-container {
+    width: 100%;
+    background: #eee;
+    display: block;
+
+    .matrix-row {
+        display: block;
+        width: 100%;
+        overflow: hidden;
+
+        .matrix-col {
+            float: left;
+            width: 50px;
+            height: 50px;
+            background: #ccc;
+            margin-right: 4px;
+            margin-bottom: 4px;
+
+            &.matrix-wall {
+                background: #444;
+            }
+        }
+    }
+}
