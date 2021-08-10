@@ -6,8 +6,11 @@
     </div>
     <div class="col-8">
       <div *ngIf="matrixBase.length > 0" class="matrix-container">
-        <div *ngFor="let matrixRow of matrixBase" class="matrix-row">
-          <div *ngFor="let matrixCol of matrixRow" [ngClass]="{'matrix-wall': (matrixCol == 1)}" class="matrix-col">
+        <div *ngFor="let matrixRow of matrixBase; let rowIndex = index" class="matrix-row">
+          <div *ngFor="let matrixCol of matrixRow; let colIndex = index" [ngClass]="{'matrix-wall': (matrixCol == 1)}" class="matrix-col">
+            <ng-container *ngFor="let colResult of matrixResult">
+              <span *ngIf="(colResult.row === rowIndex && colResult.col === colIndex)">1</span>
+            </ng-container>
           </div>
         </div>
       </div>

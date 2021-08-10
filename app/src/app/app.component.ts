@@ -4,10 +4,10 @@ interface  Matrix {
   row: number;
   col: number;
   value: number;
-  left?: Matrix[];
-  top?: Matrix[];
-  right?: Matrix[];
-  bottom?: Matrix[];
+  left: Matrix[];
+  top: Matrix[];
+  right: Matrix[];
+  bottom: Matrix[];
 }
 
 interface GroupMatrix {
@@ -39,6 +39,8 @@ export class AppComponent implements OnInit {
     [1,0,0,1,0,0,1,1],
     [0,0,1,0,0,0,0,0],
   ];
+
+  public matrixResult: Matrix[] = [];
 
   private dataMatrix: GroupMatrix = {
     vertical: {},
@@ -79,7 +81,11 @@ export class AppComponent implements OnInit {
         const path: Matrix = {
           row: indexRow,
           col: indexCol,
-          value: col
+          value: col,
+          left: [],
+          top: [],
+          right: [],
+          bottom: []
         };
 
         data.all.push(path);
@@ -174,10 +180,98 @@ export class AppComponent implements OnInit {
     });
   }
 
+  private _removeItemArray(arrayData: any[], item: any) {
+    const i = arrayData.indexOf(item);
+
+    if (i !== -1) {
+      arrayData.splice(i, 1);
+    }     
+  }
+
+  private _removeLight(light: Matrix, lights: Matrix[]) {
+    let lightsRemove: Matrix[] = [];
+    lightsRemove = lightsRemove.concat(light.top, light.right, light.bottom, light.left);
+
+    lightsRemove.forEach((lightRemove) => {
+      this._removeItemArray(lights, lightRemove);
+    });
+
+    this._removeItemArray(lights, light);
+
+    return lights;
+  }
+
+  private _getNextLight(lights: Matrix[], combination: Matrix[] = []) {
+    let selectLight: Matrix | null = null;
+  
+    lights.forEach((light) => {
+      if (!selectLight) {
+        if (light.value === 0) {
+          selectLight = light;
+        }
+      }
+    });
+
+    if (selectLight) {
+      combination.push(selectLight);
+      lights = this._removeLight(selectLight, lights);
+
+      if (lights.length > 0) {
+        this._getNextLight(lights, combination);
+      }
+    }
+
+    return combination;
+  }
+
+  private _generateCombination(light: Matrix, matrix: Matrix[], nextLigth: Matrix) {
+    const combination = [light, nextLigth];
+    matrix = this._removeLight(nextLigth, matrix);
+
+    let ligthsCombination = this._getNextLight(matrix);
+    ligthsCombination = combination.concat(ligthsCombination);
+
+    return ligthsCombination;
+  }
+
+  private _generateAllCombinations(light: Matrix, matrix: Matrix[]) {
+    matrix = this._removeLight(light, matrix);
+
+    let minCombination: Matrix[] = [];
+    matrix.forEach((selectLight) => {
+      if (selectLight.value === 0) {
+        const newMatrix = Object.assign([], matrix);
+        const combination = this._generateCombination(light, newMatrix, selectLight);
+        if (minCombination.length === 0 || minCombination.length > combination.length) {
+          minCombination = combination;
+        }
+      }
+    });
+
+    return minCombination;
+  }
+
+  private _generateMinCombinations() {
+    let minCombination: Matrix[] = [];
+    this.dataMatrix.all.forEach((light) => {
+      const newMatrix = Object.assign([], this.dataMatrix.all);
+      const combination = this._generateAllCombinations(light, newMatrix);
+
+      if (minCombination.length === 0 || minCombination.length > combination.length) {
+        minCombination = combination;
+      }
+
+    });
+
+    return minCombination;
+  }
+
   private _solve() {
     this._generateMatrix();
     this._lightsPaths();
-    console.log(this.dataMatrix);
+
+    this.matrixResult = this._generateMinCombinations();
+    console.log(this.matrixResult);
   }
 
 }
