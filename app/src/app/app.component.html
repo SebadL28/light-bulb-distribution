@@ -1,8 +1,16 @@
 <div class="container mt-5">
   <div class="row">
     <div class="col-4">
-      <input (change)="readFile($event)" type="file">
-      <button class="btn btn-primary">Cargar</button>
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title text-center mb-3">Configuración</h5>
+          <div class="mb-3">
+            <label for="input-file-matrix" class="form-label">Matriz</label>
+            <input #inputFileMatrix class="form-control" id="input-file-matrix" (change)="readFile($event)" type="file">
+          </div>
+          <button (click)="generateMatrix()" class="btn btn-primary">Cargar</button>
+        </div>
+      </div>
     </div>
     <div class="col-8">
       <div *ngIf="matrixBase.length > 0" class="matrix-container">

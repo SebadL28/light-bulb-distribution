@@ -26,21 +26,18 @@ interface GroupMatrix {
 export class AppComponent implements OnInit {
 
   public matrixBase: number[][] = [
-    [0,0,0,1,0,1,1,1],
-    [0,1,0,0,0,0,0,0],
-    [0,1,0,0,0,1,1,1],
-    [0,1,1,1,1,0,0,0],
-    [0,1,0,0,1,0,0,0],
-    [0,1,0,0,1,0,1,0],
-    [0,1,0,1,1,0,1,0],
-    [0,0,0,0,1,0,0,0],
-    [0,1,1,0,1,1,0,1],
-    [0,0,0,0,1,0,0,0],
-    [1,0,0,1,0,0,1,1],
-    [0,0,1,0,0,0,0,0],
+    [1,0,1,0,1],
+    [1,0,1,1,1],
+    [1,0,0,0,1],
+    [1,0,1,0,1],
+    [1,0,0,0,0]
   ];
 
   public matrixResult: Matrix[] = [];
+  public matrixResults: Matrix[] = [];
+
+  public levelValidation = 0;
+  public logCounter = 1;
 
   private dataMatrix: GroupMatrix = {
     vertical: {},
@@ -52,6 +49,10 @@ export class AppComponent implements OnInit {
     this._solve();
   }
 
+  public generateMatrix() {
+    this._solve();
+  }
+
   public readFile(event: any) {
     console.log(event);
     var file = event.srcElement.files[0];
@@ -60,7 +61,6 @@ export class AppComponent implements OnInit {
         reader.readAsText(file, "UTF-8");
         reader.onload = (evt: any) => {
           this.matrixBase = JSON.parse(evt.target.result);
-          this._solve();
         }
         reader.onerror = function (evt) {
             console.log('error reading file');
@@ -221,6 +221,8 @@ export class AppComponent implements OnInit {
       }
     }
 
+    this.logCounter++;
+
     return combination;
   }
 
@@ -234,10 +236,36 @@ export class AppComponent implements OnInit {
     return ligthsCombination;
   }
 
-  private _generateAllCombinations(light: Matrix, matrix: Matrix[]) {
-    matrix = this._removeLight(light, matrix);
+  private _generateLevelCombination(matrix: Matrix[], combination: Matrix[], combinations: Matrix[][], level: number) {
+    let baseMatrix: Matrix[] = Object.assign([], matrix);
+    let combinationsReturn = combinations;
+    
+    baseMatrix.forEach((selectLight) => {
+      if (selectLight.value === 0) {
+        const currentCombination: Matrix[] = Object.assign([], combination);
+        currentCombination.push(selectLight);
 
+        let newMatrix: Matrix[] = Object.assign([], baseMatrix);
+        newMatrix = this._removeLight(selectLight, newMatrix);
+
+        if (level > 0) {
+          combinationsReturn = this._generateLevelCombination(newMatrix, currentCombination, combinations, level - 1);
+        } else {
+          let ligthsCombination = this._getNextLight(newMatrix);
+          ligthsCombination = currentCombination.concat(ligthsCombination);
+
+          combinationsReturn.push(ligthsCombination);
+        }
+      }
+    });
+
+    return combinationsReturn;
+  }
+
+  private _generateAllCombinations(light: Matrix, matrix: Matrix[]) {
     let minCombination: Matrix[] = [];
+
+    matrix = this._removeLight(light, matrix);
     matrix.forEach((selectLight) => {
       if (selectLight.value === 0) {
         const newMatrix = Object.assign([], matrix);
@@ -251,16 +279,35 @@ export class AppComponent implements OnInit {
     return minCombination;
   }
 
+  private _generateAllLevelCombinations(light: Matrix, matrix: Matrix[]) {
+    let minCombination: Matrix[] = [];
+
+    const combinationPath = [light];
+    let newMatrix: Matrix[] = Object.assign([], matrix);
+
+    newMatrix = this._removeLight(light, newMatrix);
+    const allCombinations = this._generateLevelCombination(newMatrix, combinationPath, [], this.levelValidation);
+
+    allCombinations.forEach((combination) => {
+      if (minCombination.length === 0 || minCombination.length > combination.length) {
+        minCombination = combination;
+      }
+    });
+
+    return minCombination;
+  }
+
   private _generateMinCombinations() {
     let minCombination: Matrix[] = [];
+
     this.dataMatrix.all.forEach((light) => {
       const newMatrix = Object.assign([], this.dataMatrix.all);
-      const combination = this._generateAllCombinations(light, newMatrix);
+      const combination = this._generateAllLevelCombinations(light, newMatrix);
+      // const combination = this._generateAllCombinations(light, newMatrix);
 
       if (minCombination.length === 0 || minCombination.length > combination.length) {
         minCombination = combination;
       }
-
     });
 
     return minCombination;
@@ -271,6 +318,7 @@ export class AppComponent implements OnInit {
     this._lightsPaths();
 
     this.matrixResult = this._generateMinCombinations();
+    console.log(this.logCounter);
     console.log(this.matrixResult);
   }
 
