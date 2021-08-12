@@ -1,22 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import { FormControl, FormGroup } from '@angular/forms';
+import { GroupMatrix } from './interfaces/group-matrix';
+import { Matrix } from './interfaces/matrix';
 
-interface  Matrix {
-  row: number;
-  col: number;
-  value: number;
-  left: Matrix[];
-  top: Matrix[];
-  right: Matrix[];
-  bottom: Matrix[];
-}
-
-interface GroupMatrix {
-  vertical: {
-    [key: string]: Matrix[]
-  };
-  horizontal: Matrix[][],
-  all: Matrix[],
-}
 
 @Component({
   selector: 'app-root',
@@ -25,19 +11,22 @@ interface GroupMatrix {
 })
 export class AppComponent implements OnInit {
 
-  public matrixBase: number[][] = [
-    [1,0,1,0,1],
-    [1,0,1,1,1],
-    [1,0,0,0,1],
-    [1,0,1,0,1],
-    [1,0,0,0,0]
-  ];
-
-  public matrixResult: Matrix[] = [];
-  public matrixResults: Matrix[] = [];
-
+  public errorJsonFile = false;
+  public showResult = false;
+  public validating = false;
   public levelValidation = 0;
-  public logCounter = 1;
+
+  public form = new FormGroup({
+    file: new FormControl(),
+    level: new FormControl(false)
+  });
+
+  public logCounter = 0;
+
+  public matrixBase: number[][] = [];
+  public matrixResults: Matrix[][] = [];
+  public maxLights = 0;
+  public indexResult = 0;
 
   private dataMatrix: GroupMatrix = {
     vertical: {},
@@ -46,11 +35,71 @@ export class AppComponent implements OnInit {
   };
 
   ngOnInit() {
-    this._solve();
+    this.form.controls.level.valueChanges.subscribe((value) => {
+      if (value) {
+        this.levelValidation = 1;
+      } else {
+        this.levelValidation = 0;
+      }
+    });
+  }
+
+  private _clearData() {
+    this.indexResult = 0;
+    this.matrixResults = [];
+    this.dataMatrix = {
+      vertical: {},
+      horizontal: [],
+      all: []
+    };
+    this.logCounter = 0;
+  }
+
+  private _initValidate() {
+    const controls = this.form.controls;
+
+    controls.file.disable();
+    controls.level.disable();
+
+    this.validating = true;
+    this.showResult = false;
+
+    this._clearData();
+  }
+
+  private _finishValidate() {
+    const controls = this.form.controls;
+    
+    controls.file.enable();
+    controls.level.enable();
+
+    this.validating = false;
+    this.showResult = true;
   }
 
   public generateMatrix() {
-    this._solve();
+    this._initValidate();
+
+    setTimeout(() => {
+      this._solve();
+    }, 100);
+  }
+
+  public nextResult() {
+    const maxIndex = this.matrixResults.length - 1;
+    if (this.indexResult < maxIndex) {
+      this.indexResult++;
+    } else {
+      this.indexResult = 0;
+    }
+  }
+
+  public prevResult() {
+    if (this.indexResult > 0) {
+      this.indexResult--;
+    } else {
+      this.indexResult = this.matrixResults.length - 1;
+    }
   }
 
   public readFile(event: any) {
@@ -60,7 +109,15 @@ export class AppComponent implements OnInit {
         var reader = new FileReader();
         reader.readAsText(file, "UTF-8");
         reader.onload = (evt: any) => {
-          this.matrixBase = JSON.parse(evt.target.result);
+          const contentFile = evt.target.result;
+
+          try {
+            this.matrixBase = JSON.parse(contentFile);
+            this._clearData();
+            this.errorJsonFile = false;
+          } catch (e) {
+            this.errorJsonFile = true;
+          }
         }
         reader.onerror = function (evt) {
             console.log('error reading file');
@@ -75,6 +132,9 @@ export class AppComponent implements OnInit {
       all: []
     };
 
+    let idAll = 0;
+    let maxLights = 0;
+
     this.matrixBase.forEach((row, indexRow) => {
       const dataRow: Matrix[] = [];
       row.forEach((col, indexCol) => {
@@ -85,23 +145,28 @@ export class AppComponent implements OnInit {
           left: [],
           top: [],
           right: [],
-          bottom: []
+          bottom: [],
+          id: idAll
         };
-
-        data.all.push(path);
-        dataRow.push(path);
-
 
         if (!(indexCol in data.vertical)) {
           data.vertical[indexCol] = [];
         }
 
+        if (col === 0) {
+          maxLights++;
+        }
+
+        idAll++;
+        data.all.push(path);
+        dataRow.push(path);
         data.vertical[indexCol].push(path);
       });
 
       data.horizontal.push(dataRow);
     });
 
+    this.maxLights = maxLights;
     this.dataMatrix = data;
   }
 
@@ -279,47 +344,135 @@ export class AppComponent implements OnInit {
     return minCombination;
   }
 
-  private _generateAllLevelCombinations(light: Matrix, matrix: Matrix[]) {
-    let minCombination: Matrix[] = [];
+  private _removeCombinationDuplicate(combinations: Matrix[][]) {
+    const positions: number[][] = [];
+    const totalCombinations: Matrix[][] = [];
 
+    combinations.forEach((combination) => {
+      const position: number[] = [];
+      combination.forEach((lights) => {
+        position.push(lights.id);
+      });
+
+      position.sort(function(a, b) {return a - b;});
+
+      if (!this._inArray(position, positions)) {
+        positions.push(position);
+        totalCombinations.push(combination);
+      }
+    });
+
+    return totalCombinations;
+  }
+
+  private _getMinCombinations(combinations: Matrix[][]) {
+    let minCombinations: Matrix[][] = [];
+    let minLength = 9999999;
+
+    combinations.forEach((combination) => {
+      if (combination.length < minLength) {
+        minLength = combination.length;
+        minCombinations = [combination];
+      } else if (combination.length === minLength) {
+        minCombinations.push(combination);
+      }
+    });
+
+    minCombinations = this._removeCombinationDuplicate(minCombinations);
+
+    return minCombinations;
+  }
+
+  private _generateAllLevelCombinations(light: Matrix, matrix: Matrix[]) {
     const combinationPath = [light];
     let newMatrix: Matrix[] = Object.assign([], matrix);
 
     newMatrix = this._removeLight(light, newMatrix);
-    const allCombinations = this._generateLevelCombination(newMatrix, combinationPath, [], this.levelValidation);
+    const levelValidation = (this.maxLights > 2)? this.levelValidation : 0;
+    const allCombinations = this._generateLevelCombination(newMatrix, combinationPath, [], levelValidation);
 
-    allCombinations.forEach((combination) => {
-      if (minCombination.length === 0 || minCombination.length > combination.length) {
-        minCombination = combination;
-      }
-    });
-
-    return minCombination;
+    return this._getMinCombinations(allCombinations);
   }
 
   private _generateMinCombinations() {
-    let minCombination: Matrix[] = [];
+    let allCombinations: Matrix[][] = [];
 
-    this.dataMatrix.all.forEach((light) => {
-      const newMatrix = Object.assign([], this.dataMatrix.all);
-      const combination = this._generateAllLevelCombinations(light, newMatrix);
-      // const combination = this._generateAllCombinations(light, newMatrix);
+    if (this.maxLights > 1) {
+      this.dataMatrix.all.forEach((light) => {
+        const newMatrix = Object.assign([], this.dataMatrix.all);
+        const combinations = this._generateAllLevelCombinations(light, newMatrix);
 
-      if (minCombination.length === 0 || minCombination.length > combination.length) {
-        minCombination = combination;
+        allCombinations = allCombinations.concat(combinations);
+      });
+    } else {
+      let selectLight: Matrix | null = null;
+      this.dataMatrix.all.forEach((light) => {
+        if (light.value === 0) {
+          selectLight = light;
+        }
+      });
+
+      if (selectLight) {
+        allCombinations = [[selectLight]];
       }
-    });
+    }
 
-    return minCombination;
+
+    return this._getMinCombinations(allCombinations);
   }
 
   private _solve() {
     this._generateMatrix();
     this._lightsPaths();
 
-    this.matrixResult = this._generateMinCombinations();
-    console.log(this.logCounter);
-    console.log(this.matrixResult);
+    this.indexResult = 0;
+    this.matrixResults = this._generateMinCombinations();
+
+    this.showResult = true;
+    this.validating = false;
+    this._finishValidate();
+  }
+
+
+
+
+
+
+
+
+
+
+  // Function search value in array
+  private _arrayCompare(a1: any, a2: any) {
+    if (a1.length != a2.length) return false;
+    var length = a2.length;
+    for (var i = 0; i < length; i++) {
+        if (a1[i] !== a2[i]) return false;
+    }
+    return true;
+  }
+
+  private _inArray(needle: any, haystack: any) {
+      var length = haystack.length;
+      for(var i = 0; i < length; i++) {
+          if(typeof haystack[i] == 'object') {
+              if(this._arrayCompare(haystack[i], needle)) return true;
+          } else {
+              if(haystack[i] == needle) return true;
+          }
+      }
+      return false;
+  }
+
+  private _isJsonValid(text: string) {
+    if (/^[\],:{}\s]*$/.test(text.replace(/\\["\\\/bfnrtu]/g, '@').
+      replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
+      replace(/(?:^|:|,)(?:\s*\[)+/g, ''))
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
 }

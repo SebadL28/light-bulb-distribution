@@ -1,24 +1,87 @@
 <div class="container mt-5">
+  <h1 class="text-center mb-5">Light Bulb Distribution</h1>
   <div class="row">
     <div class="col-4">
-      <div class="card">
-        <div class="card-body">
+      <div class="card mb-4">
+        <div [formGroup]="form" class="card-body">
           <h5 class="card-title text-center mb-3">Configuración</h5>
-          <div class="mb-3">
+          <div class="mb-4">
             <label for="input-file-matrix" class="form-label">Matriz</label>
-            <input #inputFileMatrix class="form-control" id="input-file-matrix" (change)="readFile($event)" type="file">
+            <input accept=".txt" formControlName="file" #inputFileMatrix class="form-control" id="input-file-matrix" (change)="readFile($event)" type="file">
+            <small *ngIf="errorJsonFile" class="text-danger">Matriz no valida.</small>  
           </div>
-          <button (click)="generateMatrix()" class="btn btn-primary">Cargar</button>
+
+          <div class="mb-4">
+
+            <div class="form-check form-switch">
+              <input formControlName="level" class="form-check-input" type="checkbox" id="check-level">
+              <label class="form-check-label" for="check-level">Validar 2 pasos</label>
+            </div>
+            <small>Es un poco mas lento, pero se obtiene mayor cantidad de combinaciones.</small>
+          </div>
+          <hr>
+
+          <div class="d-grid gap-2">
+            <button (click)="generateMatrix()" [ngClass]="{'disabled': (matrixBase.length == 0 || validating)}" class="btn btn-primary btn-block">
+              <div *ngIf="validating" class="spinner-border text-light" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <ng-container *ngIf="!validating">
+                Cargar bombillos
+              </ng-container>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" *ngIf="(matrixBase.length > 0 && showResult && matrixResults.length > 0)">
+        <div class="card-body">
+
+            <div class="row mb-3">
+              <div class="col-6 d-flex justify-content-center align-items-center">
+                <div class="matrix-col"></div>
+                <p class="d-inline-block mb-0 ms-2">Camino</p>
+              </div>
+              <div class="col-6 d-flex justify-content-center align-items-center">
+                <div class="matrix-col matrix-wall"></div>
+                <p class="d-inline-block mb-0 ms-2">Pared</p>
+              </div>
+            </div>
+
+            <p class="text-center mb-0">
+              Se encontraron <strong>{{ matrixResults.length }}</strong> resultados con <strong>{{ matrixResults[0].length }}</strong> bombillos
+            </p>
+            <p class="text-center"><strong>({{ indexResult + 1 }}/{{ matrixResults.length }})</strong></p>
+            
+            <div class="row">
+              <div class="col">
+                <div class="d-grid gap-2">
+                  <button (click)="prevResult()" class="btn btn-secondary">Anterior</button>
+                </div>
+              </div>
+              <div class="col">
+                <div class="d-grid gap-2">
+                  <button (click)="nextResult()" class="btn btn-secondary">Siguiente</button>
+                </div>
+              </div>
+            </div>
         </div>
       </div>
     </div>
     <div class="col-8">
+
       <div *ngIf="matrixBase.length > 0" class="matrix-container">
-        <div *ngFor="let matrixRow of matrixBase; let rowIndex = index" class="matrix-row">
-          <div *ngFor="let matrixCol of matrixRow; let colIndex = index" [ngClass]="{'matrix-wall': (matrixCol == 1)}" class="matrix-col">
-            <ng-container *ngFor="let colResult of matrixResult">
-              <span *ngIf="(colResult.row === rowIndex && colResult.col === colIndex)">1</span>
-            </ng-container>
+        <div class="matrix-center">
+          <div *ngFor="let matrixRow of matrixBase; let rowIndex = index" class="matrix-row">
+            <div *ngFor="let matrixCol of matrixRow; let colIndex = index" [ngClass]="{'matrix-wall': (matrixCol == 1)}" class="matrix-col">
+              <ng-container *ngIf="showResult && matrixResults.length > 0">
+                <ng-container *ngFor="let colResult of matrixResults[indexResult]">
+                  <div *ngIf="(colResult.row === rowIndex && colResult.col === colIndex)">
+                    <img src="/assets/light.png">
+                  </div>
+                </ng-container>
+              </ng-container>
+            </div>
           </div>
         </div>
       </div>
