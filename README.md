@@ -41,6 +41,15 @@ Despues, para correr el proyecto se utiliza el siguiente comando:
 Y por ultmo se ingresa a la url generada
 > Normalmente es http://localhost:4200/
 
+Para compilar se utliza el comando:
+
+    ng build
+
+
+### Dist
+
+En caso de que no se quiera correr toda la instalación, se puede copiar la carpeta [dist](https://github.com/SebadL28/light-bulb-distribution/tree/master/dist) y abrir el `index.html`
+
 
 ## Funcionamiento
 
