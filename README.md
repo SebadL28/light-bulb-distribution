@@ -73,3 +73,7 @@ Despues dar click en la opción de `Cargar bombillos`.
 > Esta opción permite generar una mayor cantidad de combinaciones, pero generalmente tarda mas en procesar.
 
 Cuando se ha terminado de cargar los bombillos, se puede navegar entre los resultados con los botones de navegación.
+
+## Autor
+
+- Sebastian Leiva
