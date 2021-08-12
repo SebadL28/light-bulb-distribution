@@ -53,6 +53,7 @@ export class AppComponent implements OnInit {
       all: []
     };
     this.logCounter = 0;
+    this.maxLights = 0;
   }
 
   private _initValidate() {
